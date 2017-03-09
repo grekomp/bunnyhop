@@ -1,0 +1,8 @@
+@font-face {
+    font-family: 'LuckiestGuy';
+    src: url("../fonts/LuckiestGuy.ttf");
+}
+
+body {
+	background: #eee;
+}
