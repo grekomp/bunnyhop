@@ -12,6 +12,14 @@ window.onload = function() {
 		return initialSpeed * n / 2;
 	}
 	
+	// 
+	function collidesFromTop(topSprite, bottomSprite, margin){
+		if(topSprite.y + topSprite.height <= bottomSprite.y + margin && topSprite.y + topSprite.height >= bottomSprite.y - margin) 
+			if(topSprite.x >= bottomSprite.x - topSprite.width && topSprite.x <= bottomSprite.x + bottomSprite.width) {
+				return true;
+			}
+	}
+	
 	// Controls
 	var left = false;
 	var right = false;
@@ -33,8 +41,8 @@ window.onload = function() {
 
 			this.absY = y; // world y position
 
-			this.jumpSpeedInitial = 20;
-			this.gravity = 0.76; // How much will the y speed decrease per frame
+			this.jumpSpeedInitial = 19;
+			this.gravity = 0.7; // How much will the y speed decrease per frame
 
 			this.moveX = 0; // Current x movement
 			this.moveY = 2; // Current y movement
@@ -88,6 +96,7 @@ window.onload = function() {
 	var PLATFORM_W = 80;
 	var PLATFORM_H = 27;
 	var PLATFORM_IMG = "img/platform.png";
+	var PLATFORM_BOUNCY_IMG = "img/platform-bouncy.png";
 	var platforms = [];
 	
 	var Platform = Class.create(Sprite, {
@@ -105,13 +114,18 @@ window.onload = function() {
 		
 		onenterframe: function() {
 			this.y = this.absY - sceneOffset;
+		},
+		
+		collided: function(player) {
+			
 		}
+		
 	});
 	
-	var MovingPlatform = Class.create(Sprite, {
+	var MovingPlatform = Class.create(Platform, {
 		initialize: function(x, y) {
 			// Creating a sprite
-			Sprite.call(this, PLATFORM_W, PLATFORM_H);
+			Platform.call(this, x, y);
 
 			this.image = game.assets[PLATFORM_IMG];
 
@@ -119,7 +133,7 @@ window.onload = function() {
 			this.y = y; // screen y position
 
 			this.absY = y; // world y position
-			this.speed = 4;
+			this.speed = 2;
 			this.direction = 1;
 			this.rangeMin = 0;
 			this.rangeMax = 200;
@@ -141,7 +155,31 @@ window.onload = function() {
 		}
 	});
 	
-	var platformTypes = [Platform, MovingPlatform];
+	var BouncyPlatform = Class.create(Platform, {
+		initialize: function(x, y) {
+			// Creating a sprite
+			Platform.call(this, x, y);
+
+			this.image = game.assets[PLATFORM_BOUNCY_IMG];
+
+			this.x = x; // screen x position
+			this.y = y; // screen y position
+			
+			this.absY = y; // world y position
+			
+			this.bounce = 32;
+		},
+		
+		onenterframe: function() {
+			this.y = this.absY - sceneOffset;
+		},
+		
+		collided: function(player) {
+			player.moveY = this.bounce;
+		}
+	});
+	
+	var platformTypes = [Platform, MovingPlatform, BouncyPlatform];
 	
 	function getRandomInt(min, max) {
 		return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -159,7 +197,7 @@ window.onload = function() {
     var game = new Game(gameWidth, gameHeight);
 	game.scale = 1;
 	game.fps = 60;
-	game.preload(PLATFORM_IMG, PLAYER_IMG);
+	game.preload(PLATFORM_IMG, PLATFORM_BOUNCY_IMG, PLAYER_IMG);
 	
     game.onload = function() { 
 		function addNewPlatform(x, y, type) {
@@ -168,15 +206,14 @@ window.onload = function() {
 				x = getRandomInt(10, gameWidth - PLATFORM_W - 10);
 				y = -PLATFORM_H;
 				absY = sceneOffset - PLATFORM_H;
-				console.log(absY);
 			}else{
 				absY = sceneOffset + y;
 			}
 			
 			if(typeof type !== "undefined") {
-				var platform = new Platform(x, y);
+				var platform = new platformTypes[type](x, y);
 			}else{
-				var platform = new Platform(x, y);
+				var platform = new platformTypes[Math.floor(Math.random()*platformTypes.length)](x, y);
 			}
 			
 			platform.absY = absY;
@@ -193,7 +230,7 @@ window.onload = function() {
 		
 		function setup(){
 			// Setup player
-			player = new Player(200, 640);
+			player = new Player((game.width - PLAYER_W)/2, 640);
 
 			// Setup score text
 			scoreText = new Label("Score: 0");
@@ -203,16 +240,20 @@ window.onload = function() {
 
 			// Setup platforms
 
-			addNewPlatform(0, 800);
-			addNewPlatform(PLATFORM_W, 800);
-			addNewPlatform(PLATFORM_W*2, 800);
-			addNewPlatform(PLATFORM_W*3, 800);
-			addNewPlatform(PLATFORM_W*4, 800);
+			addNewPlatform(0, 800, 0);
+			addNewPlatform(PLATFORM_W, 800, 0);
+			addNewPlatform(PLATFORM_W*2, 800, 0);
+			addNewPlatform(PLATFORM_W*3, 800, 0);
+			addNewPlatform(PLATFORM_W*4, 800, 0);
+			addNewPlatform(PLATFORM_W*5, 800, 0);
+			addNewPlatform(PLATFORM_W*6, 800, 0);
+			addNewPlatform(PLATFORM_W*7, 800, 0);
 			
-			addNewPlatform((gameWidth-PLATFORM_W)/2, 600);
-			addNewPlatform((gameWidth-PLATFORM_W)/2, 400);
-			addNewPlatform((gameWidth-PLATFORM_W)/2, 200);
-			addNewPlatform((gameWidth-PLATFORM_W)/2, 10);
+			
+			addNewPlatform((gameWidth-PLATFORM_W)/2, 600, 0);
+			addNewPlatform((gameWidth-PLATFORM_W)/2, 400, 0);
+			addNewPlatform((gameWidth-PLATFORM_W)/2, 200, 0);
+			addNewPlatform((gameWidth-PLATFORM_W)/2, 10, 0);
 
 			mainScene.addChild(mainGroup);
 			mainScene.addChild(player);
@@ -228,6 +269,8 @@ window.onload = function() {
 			mainscene.removeChild(player);
 			mainscene.removeChild(scoreText);
 		}
+		
+		
 		
 		setup();
 		
@@ -261,12 +304,18 @@ window.onload = function() {
 					platforms.splice(index, 1);
 				};
 				
+				if(player.moveY <= 0 && collidesFromTop(player, platform, Math.abs(player.moveY) + 1)) {
+					player.moveY = player.jumpSpeedInitial;
+					platform.collided(player);
+				}
+				/*
 				if(player.moveY <= 0) {
 					if(player.y + PLAYER_H <= platform.y - player.moveY - 2 && player.y + PLAYER_H >= platform.y + player.moveY + 2) 
 						if(player.x >= platform.x - PLAYER_W && player.x <= platform.x + PLATFORM_W) {
 							player.moveY = player.jumpSpeedInitial;
 						}
 				}
+				*/
 			});
 			
 			// Adding new platforms
