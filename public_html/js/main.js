@@ -193,11 +193,14 @@ window.onload = function() {
 	
 	// Clouds
 	var CLOUD_IMG = "img/cloud.png";
-	var CLOUD_W = 100;
-	var CLOUD_H = 64;
+	var CLOUD_W = 400;
+	var CLOUD_H = 400;
+	var clouds = [];
+	
+	var lastCloud = -400;
 	
 	var Cloud = Class.create(Sprite, {
-		initialize: function(x, y) {
+		initialize: function(x, y, layer) {
 			// Creating a sprite
 			Sprite.call(this, CLOUD_W, CLOUD_H);
 
@@ -206,15 +209,23 @@ window.onload = function() {
 			this.x = x; // screen x position
 			this.y = y; // screen y position
 
-			this.absY = y; // world y position
+			this.layer = layer;
+			this.absY = sceneOffset + y * this.layer; // world y position
 			
-			this.speed = 2;
+			this.speed = 1;
 			this.direction = 1;
+			
+			this.originX = 0;
+			this.originY = 0;
 		},
 		
 		onenterframe: function() {
-			this.x += this.speed * this.direction;
-			this.y = this.absY - sceneOffset;
+			this.scaleX = (1 / this.layer);
+			this.scaleY = (1 / this.layer);
+			this.opacity = 1 / this.layer;
+			
+			this.x += this.speed * this.direction / this.layer;
+			this.y = (this.absY - sceneOffset) / this.layer;
 		}
 	});
 	
@@ -253,6 +264,24 @@ window.onload = function() {
 			platforms.push(platform);
 			mainGroup.addChild(platform);
 		};
+		
+		function addNewCloud(x, y, layer) {
+			if(typeof layer === "undefined") layer = Math.random()*5 + 1.6;
+			
+			if(typeof x === "undefined" && typeof y === "undefined") {
+				x = getRandomInt(-400, game.width - 200);
+				y = -CLOUD_H/layer;
+			}
+			
+			var cloud = new Cloud(x, y, layer);
+			cloud.scaleX = 1 / layer;
+			cloud.scaleY = 1 / layer;
+			
+			clouds.push(cloud);
+			bgGroup.addChild(cloud);
+			
+			lastCloud = absY;
+		}
 		
 		var player;
 		var scoreText;
@@ -299,6 +328,8 @@ window.onload = function() {
 			addNewPlatform((GAME_W-PLATFORM_W)/2, 400, 0);
 			addNewPlatform((GAME_W-PLATFORM_W)/2, 200, 0);
 			addNewPlatform((GAME_W-PLATFORM_W)/2, 10, 0);
+			
+			addNewCloud();
 			
 			mainScene.addChild(bgGroup);
 			mainScene.addChild(mainGroup);
@@ -366,8 +397,12 @@ window.onload = function() {
 			platforms.forEach(function(platform, index){
 				mainGroup.removeChild(platforms[index]);
 			});
+			
+			clouds.forEach(function(cloud, index){
+				bgGroup.removeChild(clouds[index]);
+			});
 			platforms = [];
-			console.log("Cleaning");
+			clouds = [];
 			
 			mainScene.removeChild(mainGroup);
 			mainScene.removeChild(player);
@@ -375,6 +410,7 @@ window.onload = function() {
 			
 			sceneOffset = 0;
 			newSceneOffset = 0;
+			lastCloud = -400;
 			
 			game.popScene();
 			
@@ -424,6 +460,18 @@ window.onload = function() {
 				// Adding new platforms
 				if(platforms[platforms.length - 1].y >= player.jumpHeight - 50 - PLATFORM_H) {
 					addNewPlatform();
+				}
+				
+				clouds.forEach(function(cloud, index){
+					if(cloud.y >= game.height) { 
+						bgGroup.removeChild(clouds[index]);
+						clouds.splice(index, 1);
+					};
+				});
+				
+				// Adding new platforms
+				if( lastCloud - sceneOffset >= 100) {
+					addNewCloud();
 				}
 
 				// Moving Scene smoothly
