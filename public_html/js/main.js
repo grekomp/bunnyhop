@@ -2,8 +2,7 @@ enchant();
 
 window.onload = function() {
 
-	// Calculates how far up will the player go, based on initial speed per frame,
-	// and speed change per frame.
+	// Misc
 	function getJumpHeight(initialSpeed, gravity) {
 		if(gravity <= 0) return 0;
 
@@ -12,7 +11,6 @@ window.onload = function() {
 		return initialSpeed * n / 2;
 	}
 	
-	// 
 	function collidesFromTop(topSprite, bottomSprite, margin){
 		if(topSprite.y + topSprite.height <= bottomSprite.y + margin && topSprite.y + topSprite.height >= bottomSprite.y - margin) 
 			if(topSprite.x >= bottomSprite.x - topSprite.width && topSprite.x <= bottomSprite.x + bottomSprite.width) {
@@ -48,6 +46,8 @@ window.onload = function() {
 			this.moveY = 2; // Current y movement
 			this.speedChangeX = 1.2;
 			this.maxSpeedX = 16;
+			
+			this.jumpHeight = getJumpHeight(this.jumpSpeedInitial, this.gravity);
 		},
 
 		onenterframe: function() {
@@ -80,8 +80,8 @@ window.onload = function() {
 				this.x = 0;
 				this.moveX = 0;
 			}
-			if(this.x > gameWidth - PLAYER_W){
-				this.x = gameWidth - PLAYER_W;
+			if(this.x > GAME_W - PLAYER_W){
+				this.x = GAME_W - PLAYER_W;
 				this.moveX = 0;
 			}
 			
@@ -97,7 +97,7 @@ window.onload = function() {
 	var PLATFORM_H = 27;
 	var PLATFORM_IMG = "img/platform.png";
 	var PLATFORM_BOUNCY_IMG = "img/platform-bouncy.png";
-	var platforms = [];
+	var platforms = []; // Stores all spawned platforms
 	
 	var Platform = Class.create(Sprite, {
 		initialize: function(x, y) {
@@ -128,15 +128,16 @@ window.onload = function() {
 			Platform.call(this, x, y);
 
 			this.image = game.assets[PLATFORM_IMG];
-
+			if(x > game.width - PLATFORM_W - 210) x = game.width - PLATFORM_W - 210;
+			
 			this.x = x; // screen x position
 			this.y = y; // screen y position
-
+			
 			this.absY = y; // world y position
 			this.speed = 2;
 			this.direction = 1;
-			this.rangeMin = 0;
-			this.rangeMax = 200;
+			this.rangeMin = x;
+			this.rangeMax = x + 200;
 		},
 		
 		onenterframe: function() {
@@ -185,25 +186,56 @@ window.onload = function() {
 		return Math.floor(Math.random() * (max - min + 1)) + min;
 	};
 	
-	var gameWidth = 640;
-	var gameHeight = 960;
+	// Config
+	var GAME_W = 640;
+	var GAME_H = 960;
+	var gameRunning = true;
 	
-	var jumpHeight = 200;
+	// Clouds
+	var CLOUD_IMG = "img/cloud.png";
+	var CLOUD_W = 100;
+	var CLOUD_H = 64;
+	
+	var Cloud = Class.create(Sprite, {
+		initialize: function(x, y) {
+			// Creating a sprite
+			Sprite.call(this, CLOUD_W, CLOUD_H);
+
+			this.image = game.assets[CLOUD_IMG];
+
+			this.x = x; // screen x position
+			this.y = y; // screen y position
+
+			this.absY = y; // world y position
+			
+			this.speed = 2;
+			this.direction = 1;
+		},
+		
+		onenterframe: function() {
+			this.x += this.speed * this.direction;
+			this.y = this.absY - sceneOffset;
+		}
+	});
 	
 	// Scene
+	var SCENE_BG = "img/bg.png";
+	
+	var RELOAD_IMG = "img/reload.png";
+	
 	var sceneOffset = 0;
 	var newSceneOffset = 0;
 	var sceneTransitionModifier = 1;
-    var game = new Game(gameWidth, gameHeight);
+    var game = new Game(GAME_W, GAME_H);
 	game.scale = 1;
 	game.fps = 60;
-	game.preload(PLATFORM_IMG, PLATFORM_BOUNCY_IMG, PLAYER_IMG);
+	game.preload(PLATFORM_IMG, PLATFORM_BOUNCY_IMG, PLAYER_IMG, SCENE_BG, CLOUD_IMG, RELOAD_IMG);
 	
     game.onload = function() { 
 		function addNewPlatform(x, y, type) {
 			
 			if(typeof x === "undefined" && typeof y === "undefined") {
-				x = getRandomInt(10, gameWidth - PLATFORM_W - 10);
+				x = getRandomInt(10, GAME_W - PLATFORM_W - 10);
 				y = -PLATFORM_H;
 				absY = sceneOffset - PLATFORM_H;
 			}else{
@@ -225,9 +257,22 @@ window.onload = function() {
 		var player;
 		var scoreText;
 		var mainScene = new Scene();
-		var mainGroup = new Group();
 		var gameoverScene = new Scene();
+		var mainGroup = new Group();
 		
+		// Background objects
+		var bgGroupHolder = new Group();
+		var bgGroup = new Group();
+		
+		// Add background
+		var background = new Sprite(game.width, game.height);
+		background.image = game.assets[SCENE_BG];
+		background.x = 0;
+		background.y = 0;
+		
+		bgGroup.addChild(background);
+		
+		// Setup the game
 		function setup(){
 			// Setup player
 			player = new Player((game.width - PLAYER_W)/2, 640);
@@ -237,7 +282,8 @@ window.onload = function() {
 			scoreText.x = 10; 
 			scoreText.y = 10; 
 			scoreText.font = "36px LuckiestGuy";
-
+			scoreText.color = "white";
+			
 			// Setup platforms
 
 			addNewPlatform(0, 800, 0);
@@ -249,30 +295,93 @@ window.onload = function() {
 			addNewPlatform(PLATFORM_W*6, 800, 0);
 			addNewPlatform(PLATFORM_W*7, 800, 0);
 			
+			addNewPlatform((GAME_W-PLATFORM_W)/2, 600, 0);
+			addNewPlatform((GAME_W-PLATFORM_W)/2, 400, 0);
+			addNewPlatform((GAME_W-PLATFORM_W)/2, 200, 0);
+			addNewPlatform((GAME_W-PLATFORM_W)/2, 10, 0);
 			
-			addNewPlatform((gameWidth-PLATFORM_W)/2, 600, 0);
-			addNewPlatform((gameWidth-PLATFORM_W)/2, 400, 0);
-			addNewPlatform((gameWidth-PLATFORM_W)/2, 200, 0);
-			addNewPlatform((gameWidth-PLATFORM_W)/2, 10, 0);
-
+			mainScene.addChild(bgGroup);
 			mainScene.addChild(mainGroup);
 			mainScene.addChild(player);
 			mainScene.addChild(scoreText);
 
-			mainScene.backgroundColor = 'white';
-
 			game.pushScene(mainScene);
 		}
 		
-		function cleanup() {
-			mainscene.removeChild(mainGroup);
-			mainscene.removeChild(player);
-			mainscene.removeChild(scoreText);
+		{
+			var gameoverBg = new Sprite(game.width, game.height);
+			gameoverBg.image = game.assets[SCENE_BG];
+			gameoverBg.x = 0;
+			gameoverBg.y = 0;
+			
+			gameoverScene.addChild(gameoverBg);
+			
+			// Setup gameOver Scene
+			var gameoverText = new Label("Game Over");
+			gameoverText.x = 0;
+			gameoverText.y = 300;
+			gameoverText.width = game.width;
+			gameoverText.font = "72px LuckiestGuy";
+			gameoverText.textAlign = "center";
+			gameoverText.color = "white";
+
+			gameoverScene.addChild(gameoverText);
+			
+			var reloadButton = new Sprite(128, 128);
+			reloadButton.image = game.assets[RELOAD_IMG];
+			reloadButton.x = (game.width-128) / 2;
+			reloadButton.y = 560;
+			reloadButton.addEventListener(enchant.Event.TOUCH_END, function(){
+				cleanup();
+			});
+			
+			gameoverScene.addChild(reloadButton);
+			
+			var gameoverScore = new Label("Score: 0");
+			gameoverScore.x = 0;
+			gameoverScore.y = 400;
+			gameoverScore.width = game.width;
+			gameoverScore.font = "36px LuckiestGuy";
+			gameoverScore.textAlign = "center";
+			gameoverScore.color = "white";
+			
+			gameoverScene.addChild(gameoverScore);
 		}
 		
-		
-		
 		setup();
+		
+		function gameover() {
+			game.popScene();
+			
+			gameRunning = false;
+
+			gameoverScore.text = "Score: " + Math.floor(Math.abs(sceneOffset));
+			
+			game.pushScene(gameoverScene);
+		}
+		
+		//game.pushScene(gameoverScene);
+		
+		function cleanup() {
+			platforms.forEach(function(platform, index){
+				mainGroup.removeChild(platforms[index]);
+			});
+			platforms = [];
+			console.log("Cleaning");
+			
+			mainScene.removeChild(mainGroup);
+			mainScene.removeChild(player);
+			mainScene.removeChild(scoreText);
+			
+			sceneOffset = 0;
+			newSceneOffset = 0;
+			
+			game.popScene();
+			
+			setup();
+			gameRunning = true;
+		}
+		
 		
 		// Add controls
 		game.addEventListener(enchant.Event.LEFT_BUTTON_DOWN, function(){
@@ -293,44 +402,42 @@ window.onload = function() {
 		
 		
 		game.addEventListener("enterframe", function(){
-			// Update the score
-			scoreText.text = "Score: " + Math.floor(-sceneOffset);
-			
-			// Move platforms
-			platforms.forEach(function(platform, index) {
-				
-				if(platform.y >= game.height) { 
-					mainGroup.removeChild(platforms[index]);
-					platforms.splice(index, 1);
-				};
-				
-				if(player.moveY <= 0 && collidesFromTop(player, platform, Math.abs(player.moveY) + 1)) {
-					player.moveY = player.jumpSpeedInitial;
-					platform.collided(player);
+			if(gameRunning) {
+
+				// Update the score
+				scoreText.text = "Score: " + Math.floor(-sceneOffset);
+
+				// Move platforms
+				platforms.forEach(function(platform, index) {
+
+					if(platform.y >= game.height) { 
+						mainGroup.removeChild(platforms[index]);
+						platforms.splice(index, 1);
+					};
+
+					if(player.moveY <= 0 && collidesFromTop(player, platform, Math.abs(player.moveY) + 1)) {
+						player.moveY = player.jumpSpeedInitial;
+						platform.collided(player);
+					}
+				});
+
+				// Adding new platforms
+				if(platforms[platforms.length - 1].y >= player.jumpHeight - 50 - PLATFORM_H) {
+					addNewPlatform();
 				}
-				/*
-				if(player.moveY <= 0) {
-					if(player.y + PLAYER_H <= platform.y - player.moveY - 2 && player.y + PLAYER_H >= platform.y + player.moveY + 2) 
-						if(player.x >= platform.x - PLAYER_W && player.x <= platform.x + PLATFORM_W) {
-							player.moveY = player.jumpSpeedInitial;
-						}
+
+				// Moving Scene smoothly
+				if(player.absY - newSceneOffset <= 300) newSceneOffset -= 300 - player.y;
+
+				sceneOffset = sceneOffset * (1-sceneTransitionModifier) + newSceneOffset * sceneTransitionModifier;
+
+				// Ending game
+				if(player.y > game.height) {
+					console.log("Game Over!");
+					gameover();
 				}
-				*/
-			});
-			
-			// Adding new platforms
-			if(platforms[platforms.length - 1].y >= jumpHeight - PLATFORM_H) {
-				addNewPlatform();
+
 			}
-			
-			// Moving Scene smoothly
-			if(player.absY - newSceneOffset <= 300) newSceneOffset -= 300 - player.y;
-			
-			sceneOffset = sceneOffset * (1-sceneTransitionModifier) + newSceneOffset * sceneTransitionModifier;
-			
-			// Ending game
-			
-			
 		});
 		
     };
