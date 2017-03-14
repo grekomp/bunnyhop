@@ -96,7 +96,7 @@ window.onload = function() {
 	var PLATFORM_W = 80;
 	var PLATFORM_H = 27;
 	var PLATFORM_IMG = "img/platform.png";
-	var PLATFORM_BOUNCY_IMG = "img/platform-bouncy.png";
+	var PLATFORM_BOUNCY_IMG = "img/trampolinka.png";
 	var platforms = []; // Stores all spawned platforms
 	
 	var Platform = Class.create(Sprite, {
