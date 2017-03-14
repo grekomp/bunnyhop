@@ -192,9 +192,9 @@ window.onload = function() {
 	var gameRunning = true;
 	
 	// Clouds
-	var CLOUD_IMG = "img/cloud.png";
+	var CLOUD_IMG = "img/chmurka.png";
 	var CLOUD_W = 400;
-	var CLOUD_H = 400;
+	var CLOUD_H = 184;
 	var clouds = [];
 	
 	var lastCloud = -400;
