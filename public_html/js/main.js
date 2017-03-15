@@ -92,6 +92,28 @@ window.onload = function() {
 		}
 	});
 	
+	// Carrot
+	var CARROT_IMG = "img/carrot.png";
+	var nextCarrot = -10000;
+	
+	var Carrot = Class.create(Sprite, {
+		initialize: function(x, y) {
+			// Creating a sprite
+			Sprite.call(this, 64, 64);
+
+			this.image = game.assets[CARROT_IMG];
+
+			this.x = x; // screen x position
+			this.y = y; // screen y position
+
+			this.absY = sceneOffset + y; // world y position
+		},
+		
+		onenterframe: function() {
+			this.y = this.absY - sceneOffset;
+		}
+	});
+	
 	// Platforms
 	var PLATFORM_W = 80;
 	var PLATFORM_H = 27;
@@ -240,9 +262,11 @@ window.onload = function() {
     var game = new Game(GAME_W, GAME_H);
 	game.scale = 1;
 	game.fps = 60;
-	game.preload(PLATFORM_IMG, PLATFORM_BOUNCY_IMG, PLAYER_IMG, SCENE_BG, CLOUD_IMG, RELOAD_IMG);
+	game.preload(PLATFORM_IMG, PLATFORM_BOUNCY_IMG, PLAYER_IMG, SCENE_BG, CLOUD_IMG, RELOAD_IMG, CARROT_IMG);
 	
     game.onload = function() { 
+		game.keybind(13, 'a');
+		
 		function addNewPlatform(x, y, type) {
 			
 			if(typeof x === "undefined" && typeof y === "undefined") {
@@ -269,7 +293,7 @@ window.onload = function() {
 			if(typeof layer === "undefined") layer = Math.random()*5 + 1.6;
 			
 			if(typeof x === "undefined" && typeof y === "undefined") {
-				x = getRandomInt(-400, game.width - 200);
+				x = getRandomInt(-400, game.width);
 				y = -CLOUD_H/layer;
 			}
 			
@@ -288,9 +312,9 @@ window.onload = function() {
 		var mainScene = new Scene();
 		var gameoverScene = new Scene();
 		var mainGroup = new Group();
+		var carrot;
 		
 		// Background objects
-		var bgGroupHolder = new Group();
 		var bgGroup = new Group();
 		
 		// Add background
@@ -313,8 +337,10 @@ window.onload = function() {
 			scoreText.font = "36px LuckiestGuy";
 			scoreText.color = "white";
 			
+			// Setup carrot
+			carrot = new Carrot(getRandomInt(0, game.width - 64), getRandomInt(-10000, -20000));
+			
 			// Setup platforms
-
 			addNewPlatform(0, 800, 0);
 			addNewPlatform(PLATFORM_W, 800, 0);
 			addNewPlatform(PLATFORM_W*2, 800, 0);
@@ -330,6 +356,8 @@ window.onload = function() {
 			addNewPlatform((GAME_W-PLATFORM_W)/2, 10, 0);
 			
 			addNewCloud();
+			
+			mainGroup.addChild(carrot);
 			
 			mainScene.addChild(bgGroup);
 			mainScene.addChild(mainGroup);
@@ -366,6 +394,11 @@ window.onload = function() {
 				cleanup();
 			});
 			
+			game.addEventListener(enchant.Event.A_BUTTON_DOWN, function(){
+				if(gameRunning === false)
+					cleanup();
+			});
+			
 			gameoverScene.addChild(reloadButton);
 			
 			var gameoverScore = new Label("Score: 0");
@@ -391,8 +424,6 @@ window.onload = function() {
 			game.pushScene(gameoverScene);
 		}
 		
-		//game.pushScene(gameoverScene);
-		
 		function cleanup() {
 			platforms.forEach(function(platform, index){
 				mainGroup.removeChild(platforms[index]);
@@ -407,6 +438,7 @@ window.onload = function() {
 			mainScene.removeChild(mainGroup);
 			mainScene.removeChild(player);
 			mainScene.removeChild(scoreText);
+			mainGroup.removeChild(carrot);
 			
 			sceneOffset = 0;
 			newSceneOffset = 0;
@@ -462,6 +494,7 @@ window.onload = function() {
 					addNewPlatform();
 				}
 				
+				// Removing out of screen clouds
 				clouds.forEach(function(cloud, index){
 					if(cloud.y >= game.height) { 
 						bgGroup.removeChild(clouds[index]);
@@ -473,7 +506,20 @@ window.onload = function() {
 				if( lastCloud - sceneOffset >= 100) {
 					addNewCloud();
 				}
-
+				
+				if(player.intersect(carrot)) {
+					player.moveY = 100;
+					mainGroup.removeChild(carrot);
+					carrot = new Carrot(getRandomInt(0, game.width - 64), getRandomInt(-20000, -40000));
+					mainGroup.addChild(carrot);
+				}
+				
+				if(carrot.y > game.height) {
+					mainGroup.removeChild(carrot);
+					carrot = new Carrot(getRandomInt(0, game.width - 64), getRandomInt(-20000, -40000));
+					mainGroup.addChild(carrot);
+				}
+				
 				// Moving Scene smoothly
 				if(player.absY - newSceneOffset <= 300) newSceneOffset -= 300 - player.y;
 
@@ -481,7 +527,6 @@ window.onload = function() {
 
 				// Ending game
 				if(player.y > game.height) {
-					console.log("Game Over!");
 					gameover();
 				}
 
