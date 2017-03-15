@@ -338,7 +338,7 @@ window.onload = function() {
 			scoreText.color = "white";
 			
 			// Setup carrot
-			carrot = new Carrot(getRandomInt(0, game.width - 64), getRandomInt(-10000, -20000));
+			carrot = new Carrot(getRandomInt(0, game.width - 64), getRandomInt(-3000, -10000));
 			
 			// Setup platforms
 			addNewPlatform(0, 800, 0);
@@ -508,15 +508,15 @@ window.onload = function() {
 				}
 				
 				if(player.intersect(carrot)) {
-					player.moveY = 100;
+					player.moveY = 80;
 					mainGroup.removeChild(carrot);
-					carrot = new Carrot(getRandomInt(0, game.width - 64), getRandomInt(-20000, -40000));
+					carrot = new Carrot(getRandomInt(0, game.width - 64), getRandomInt(-10000, -20000));
 					mainGroup.addChild(carrot);
 				}
 				
 				if(carrot.y > game.height) {
 					mainGroup.removeChild(carrot);
-					carrot = new Carrot(getRandomInt(0, game.width - 64), getRandomInt(-20000, -40000));
+					carrot = new Carrot(getRandomInt(0, game.width - 64), getRandomInt(-10000, -20000));
 					mainGroup.addChild(carrot);
 				}
 				
